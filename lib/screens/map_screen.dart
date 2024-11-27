@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MapScreen extends StatefulWidget {
+  final double latitude;
+  final double longitude;
+
+  MapScreen({required this.latitude, required this.longitude});
+
   @override
   _MapScreenState createState() => _MapScreenState();
 }
@@ -9,32 +14,23 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   late GoogleMapController mapController;
 
-  final LatLng _center = LatLng(41.3851, 2.1734);
-
-  void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('지도 및 동선')),
       body: GoogleMap(
-        onMapCreated: _onMapCreated,
+        onMapCreated: (controller) {
+          mapController = controller;
+        },
         initialCameraPosition: CameraPosition(
-          target: _center,
+          target: LatLng(widget.latitude, widget.longitude),
           zoom: 12,
         ),
         markers: {
           Marker(
-            markerId: MarkerId('맛집1'),
-            position: LatLng(41.3851, 2.1734),
-            infoWindow: InfoWindow(title: '맛집1'),
-          ),
-          Marker(
-            markerId: MarkerId('명소1'),
-            position: LatLng(41.4036, 2.1744),
-            infoWindow: InfoWindow(title: '명소1'),
+            markerId: MarkerId('currentLocation'),
+            position: LatLng(widget.latitude, widget.longitude),
+            infoWindow: InfoWindow(title: '여행지 위치'),
           ),
         },
       ),

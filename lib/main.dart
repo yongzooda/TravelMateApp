@@ -20,15 +20,24 @@ class TravelMateApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TravelMate',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
       initialRoute: '/', // 초기 화면
       routes: {
         '/': (context) => LoginScreen(), // 로그인 화면
         '/home': (context) => HomeScreen(), // 홈 화면
         '/myTrips': (context) => MyTripsScreen(), // 여행 목록 화면
         '/addTrip': (context) => AddTripScreen(), // 새 여행 추가 화면
-        '/tripDetail': (context) => TripDetailScreen(
-          trip: ModalRoute.of(context)!.settings.arguments as Map<String, String>,
-        ), // 여행 상세 화면
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/tripDetail') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => TripDetailScreen(trip: args),
+          );
+        }
+        return null;
       },
     );
   }

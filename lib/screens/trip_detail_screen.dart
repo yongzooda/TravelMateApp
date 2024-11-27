@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import '../services/weather_service.dart';
+import '../services/photo_service.dart';
 import 'map_screen.dart';
+import '../widgets/app_drawer.dart';
 
 class TripDetailScreen extends StatefulWidget {
-  final Map<String, String> trip;
+  final Map<String, dynamic> trip;
 
-  TripDetailScreen({required this.trip});
+  // trip 파라미터를 명시적으로 생성자에 추가
+  const TripDetailScreen({Key? key, required this.trip}) : super(key: key);
 
   @override
   _TripDetailScreenState createState() => _TripDetailScreenState();
@@ -13,17 +16,21 @@ class TripDetailScreen extends StatefulWidget {
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
   final WeatherService weatherService = WeatherService();
+  final PhotoService photoService = PhotoService();
   Map<String, dynamic>? weatherData;
+  String? photoUrl;
 
   @override
   void initState() {
     super.initState();
     fetchWeather();
+    fetchPhoto();
+    debugFirestoreData();
   }
 
   void fetchWeather() async {
     try {
-      final data = await weatherService.fetchWeather(widget.trip['name']!);
+      final data = await weatherService.fetchWeather(widget.trip['name']);
       setState(() {
         weatherData = data;
       });
@@ -32,43 +39,118 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
+  void fetchPhoto() async {
+    try {
+      final url = await photoService.fetchPhoto(widget.trip['name']);
+      setState(() {
+        photoUrl = url;
+      });
+    } catch (e) {
+      print('Failed to fetch photo: $e');
+    }
+  }
+
+  void debugFirestoreData() {
+    print('Trip Data: ${widget.trip}');
+    print('Latitude: ${widget.trip['latitude']}');
+    print('Longitude: ${widget.trip['longitude']}');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final latitude = widget.trip['latitude'] ?? 0.0;
+    final longitude = widget.trip['longitude'] ?? 0.0;
+
     return Scaffold(
       appBar: AppBar(title: Text('${widget.trip['name']} 여행')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      drawer: AppDrawer(),
+      body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.asset(widget.trip['photo']!, width: double.infinity, height: 200, fit: BoxFit.cover),
-            SizedBox(height: 16),
-            Text(
-              '${widget.trip['name']} 여행',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text('날짜: ${widget.trip['dates']}'),
-            SizedBox(height: 16),
-            weatherData == null
-                ? CircularProgressIndicator()
-                : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Stack(
               children: [
-                Text('현재 날씨: ${weatherData!['weather'][0]['description']}'),
-                Text('온도: ${weatherData!['main']['temp']}°C'),
-                Text('습도: ${weatherData!['main']['humidity']}%'),
+                photoUrl != null
+                    ? Image.network(
+                  photoUrl!,
+                  width: double.infinity,
+                  height: 250,
+                  fit: BoxFit.cover,
+                )
+                    : Container(
+                  width: double.infinity,
+                  height: 250,
+                  color: Colors.grey[300],
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  child: Text(
+                    widget.trip['name'] ?? '여행지 이름 없음',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 4.0,
+                          color: Colors.black,
+                          offset: Offset(2.0, 2.0),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MapScreen()),
-                );
-              },
-              child: Text('지도 및 동선 보기'),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '여행 일정: ${widget.trip['dates']}',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  SizedBox(height: 16),
+                  weatherData == null
+                      ? Center(child: CircularProgressIndicator())
+                      : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '현재 날씨: ${weatherData!['weather'][0]['description']}',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      Text(
+                        '온도: ${weatherData!['main']['temp']}°C',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      Text(
+                        '습도: ${weatherData!['main']['humidity']}%',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MapScreen(
+                            latitude: latitude,
+                            longitude: longitude,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.map),
+                    label: Text('여행지 지도 보기'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
