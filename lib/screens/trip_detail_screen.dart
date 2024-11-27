@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import '../services/weather_service.dart';
 import '../services/photo_service.dart';
 import 'map_screen.dart';
+import 'restaurant_map_screen.dart';
+import 'landmark_map_screen.dart';
+import 'accommodation_map_screen.dart';
 import '../widgets/app_drawer.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Map<String, dynamic> trip;
 
-  // trip 파라미터를 명시적으로 생성자에 추가
   const TripDetailScreen({Key? key, required this.trip}) : super(key: key);
 
   @override
@@ -148,6 +150,54 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     },
                     icon: Icon(Icons.map),
                     label: Text('여행지 지도 보기'),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RestaurantMapScreen(
+                            latitude: latitude,
+                            longitude: longitude,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.restaurant),
+                    label: Text('맛집 지도 보기'),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LandmarkMapScreen(
+                            latitude: latitude,
+                            longitude: longitude,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.location_city),
+                    label: Text('명소 지도 보기'),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AccommodationMapScreen(
+                            latitude: latitude,
+                            longitude: longitude,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.hotel),
+                    label: Text('숙소 지도 보기'),
                   ),
                 ],
               ),
