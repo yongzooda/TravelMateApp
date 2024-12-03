@@ -48,10 +48,29 @@ class _AccommodationMapScreenState extends State<AccommodationMapScreen> {
     }
   }
 
+  Widget buildStarRating(double rating) {
+    return Row(
+      children: List.generate(5, (index) {
+        double value = rating - index;
+        if (value >= 1) {
+          // 별이 완전히 채워진 경우
+          return Icon(Icons.star, color: Colors.amber, size: 20);
+        } else if (value > 0) {
+          // 별이 절반만 채워진 경우
+          return Icon(Icons.star_half, color: Colors.amber, size: 20);
+        } else {
+          // 별이 비어있는 경우
+          return Icon(Icons.star_border, color: Colors.amber, size: 20);
+        }
+      }),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('숙소 지도')),
+      appBar: AppBar(title: Text('맛집 지도')),
       body: Stack(
         children: [
           GoogleMap(
@@ -67,24 +86,87 @@ class _AccommodationMapScreenState extends State<AccommodationMapScreen> {
               left: 0,
               right: 0,
               child: Container(
+                height: 300,
                 color: Colors.white,
                 padding: const EdgeInsets.all(16.0),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      selectedPlace!['name'],
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedPlace!['name'],
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                '평점: ${selectedPlace!['rating']}',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                              SizedBox(width: 8),
+                              buildStarRating(selectedPlace!['rating']),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text('주소: ${selectedPlace!['address']}'),
+                          SizedBox(height: 8),
+                          Text(
+                            '리뷰:',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          Expanded(
+                            child: (selectedPlace!['reviews'] as List).isNotEmpty
+                                ? ListView.builder(
+                              itemCount: (selectedPlace!['reviews'] as List).length,
+                              itemBuilder: (context, index) {
+                                final review = selectedPlace!['reviews'][index];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                  child: Text(
+                                    '"${review['text'] ?? '리뷰 없음'}" - ${review['author_name'] ?? '익명'}',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.grey[600]),
+                                  ),
+                                );
+                              },
+                            )
+                                : Text('리뷰가 없습니다.', style: TextStyle(color: Colors.grey)),
+                          ),
+                        ],
+                      ),
                     ),
-                    Text('평점: ${selectedPlace!['rating']}'),
-                    Text('주소: ${selectedPlace!['address']}'),
-                    if (selectedPlace!['photo_reference'] != null)
-                      Image.network(
-                        'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace!['photo_reference']}&key=${placeService.apiKey}',
-                        fit: BoxFit.cover,
+                    SizedBox(width: 16),
+                    Expanded(
+                      flex: 1,
+                      child: selectedPlace!['photo_reference'] != null
+                          ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8.0),
+                        child: Image.network(
+                          'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace!['photo_reference']}&key=${placeService.apiKey}',
+
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
                       )
-                    else
-                      Icon(Icons.image_not_supported),
+                          : Container(
+                        height: 250,
+                        width: double.infinity,
+                        color: Colors.grey[300],
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 50,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

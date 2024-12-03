@@ -4,10 +4,31 @@ import 'package:http/http.dart' as http;
 class PlaceService {
   final String apiKey = 'AIzaSyCR_YT9dN3ei0ZBsiui-9UX8Vj6POVYEHQ'; // Google Maps API 키
 
+  // Place Details API 호출
+  Future<Map<String, dynamic>> fetchPlaceDetails(String placeId) async {
+    final url =
+        'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$apiKey';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['result']; // Place Details API의 'result' 반환
+      } else {
+        print('Failed to fetch place details: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching place details: $e');
+    }
+
+    return {};
+  }
+
+  // Nearby Search API 호출 + Place Details 데이터 병합
   Future<List<Map<String, dynamic>>> fetchPlaces({
     required double latitude,
     required double longitude,
-    String? keyword, // Optional keyword for filtering
+    String? keyword,
   }) async {
     final url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
         '?location=$latitude,$longitude&radius=5000'
@@ -16,31 +37,28 @@ class PlaceService {
 
     try {
       final response = await http.get(Uri.parse(url));
-      print('Request URL: $url');
-      print('Response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('Full API Response: ${data['results']}');
 
         if (data['results'] != null) {
-          final results = (data['results'] as List)
-              .map((place) => {
-            'name': place['name'],
-            'rating': place['rating'] ?? 0.0,
-            'lat': place['geometry']['location']['lat'],
-            'lng': place['geometry']['location']['lng'],
-            'photo_reference': place['photos'] != null &&
-                place['photos'].isNotEmpty
-                ? place['photos'][0]['photo_reference']
-                : null,
-            'address': place['vicinity'],
-          })
-              .toList();
+          final results = (data['results'] as List);
+          final detailedPlaces = await Future.wait(results.map((place) async {
+            final details = await fetchPlaceDetails(place['place_id']);
+            return {
+              'name': place['name'],
+              'rating': place['rating'] ?? 0.0,
+              'lat': place['geometry']['location']['lat'],
+              'lng': place['geometry']['location']['lng'],
+              'photo_reference': place['photos'] != null &&
+                  place['photos'].isNotEmpty
+                  ? place['photos'][0]['photo_reference']
+                  : null,
+              'address': place['vicinity'],
+              'reviews': details['reviews'] ?? [],
+            };
+          }));
 
-          print('Filtered Results: $results');
-          results.sort((a, b) => b['rating'].compareTo(a['rating']));
-          return results;
+          return detailedPlaces;
         }
       } else {
         print('Failed to fetch places: ${response.statusCode}');

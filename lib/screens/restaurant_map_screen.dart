@@ -49,16 +49,22 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
 
   Widget buildStarRating(double rating) {
     return Row(
-      children: List.generate(
-        5,
-            (index) => Icon(
-          index < rating ? Icons.star : Icons.star_border,
-          color: Colors.amber,
-          size: 20,
-        ),
-      ),
+      children: List.generate(5, (index) {
+        double value = rating - index;
+        if (value >= 1) {
+          // 별이 완전히 채워진 경우
+          return Icon(Icons.star, color: Colors.amber, size: 20);
+        } else if (value > 0) {
+          // 별이 절반만 채워진 경우
+          return Icon(Icons.star_half, color: Colors.amber, size: 20);
+        } else {
+          // 별이 비어있는 경우
+          return Icon(Icons.star_border, color: Colors.amber, size: 20);
+        }
+      }),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +85,7 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
               left: 0,
               right: 0,
               child: Container(
-                height: 300, // 사이드바 높이 조정
+                height: 300,
                 color: Colors.white,
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -112,13 +118,26 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
                           Text('주소: ${selectedPlace!['address']}'),
                           SizedBox(height: 8),
                           Text(
-                            '대표 메뉴: 김치찌개, 삼겹살', // 예시 메뉴
-                            style: TextStyle(fontSize: 14),
+                            '리뷰:',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            '리뷰: 정말 맛있어요!', // 예시 리뷰
-                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                          Expanded(
+                            child: (selectedPlace!['reviews'] as List).isNotEmpty
+                                ? ListView.builder(
+                              itemCount: (selectedPlace!['reviews'] as List).length,
+                              itemBuilder: (context, index) {
+                                final review = selectedPlace!['reviews'][index];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                  child: Text(
+                                    '"${review['text'] ?? '리뷰 없음'}" - ${review['author_name'] ?? '익명'}',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.grey[600]),
+                                  ),
+                                );
+                              },
+                            )
+                                : Text('리뷰가 없습니다.', style: TextStyle(color: Colors.grey)),
                           ),
                         ],
                       ),
@@ -131,13 +150,13 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
                         borderRadius: BorderRadius.circular(8.0),
                         child: Image.network(
                           'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace!['photo_reference']}&key=${placeService.apiKey}',
-                          height: 120, // 고정 높이
+
                           width: double.infinity,
                           fit: BoxFit.cover,
                         ),
                       )
                           : Container(
-                        height: 120,
+                        height: 250,
                         width: double.infinity,
                         color: Colors.grey[300],
                         child: Icon(
