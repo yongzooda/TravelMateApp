@@ -69,7 +69,7 @@ class _LandmarkMapScreenState extends State<LandmarkMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('맛집 지도')),
+      appBar: AppBar(title: Text('명소 지도')),
       body: Stack(
         children: [
           GoogleMap(

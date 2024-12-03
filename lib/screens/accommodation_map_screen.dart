@@ -70,7 +70,7 @@ class _AccommodationMapScreenState extends State<AccommodationMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('맛집 지도')),
+      appBar: AppBar(title: Text('숙소 지도')),
       body: Stack(
         children: [
           GoogleMap(

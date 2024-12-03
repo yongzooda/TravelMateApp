@@ -61,7 +61,6 @@ class MyTripsScreen extends StatelessWidget {
                     },
                   ),
                   onTap: () {
-                    // 여행 상세 화면으로 이동
                     Navigator.pushNamed(
                       context,
                       '/tripDetail',
@@ -69,6 +68,8 @@ class MyTripsScreen extends StatelessWidget {
                         'name': tripData['name'],
                         'dates': tripData['dates'],
                         'photo': tripData['photo'],
+                        'latitude': tripData['latitude'], // 위도 추가
+                        'longitude': tripData['longitude'], // 경도 추가
                       },
                     );
                   },
