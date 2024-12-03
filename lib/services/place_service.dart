@@ -7,45 +7,46 @@ class PlaceService {
   Future<List<Map<String, dynamic>>> fetchPlaces({
     required double latitude,
     required double longitude,
-    required String type,
+    String? keyword, // Optional keyword for filtering
   }) async {
-    final url =
-        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$latitude,$longitude&radius=5000&type=$type&key=$apiKey';
+    final url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
+        '?location=$latitude,$longitude&radius=5000'
+        '${keyword != null ? '&keyword=$keyword' : ''}'
+        '&key=$apiKey';
 
     try {
-      print('Requesting URL: $url');
       final response = await http.get(Uri.parse(url));
+      print('Request URL: $url');
       print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('Response Data: ${data['results']}');
+        print('Full API Response: ${data['results']}');
 
         if (data['results'] != null) {
-          // 데이터 필터링 및 정렬
           final results = (data['results'] as List)
-              .where((place) =>
-          place['geometry'] != null &&
-              place['geometry']['location'] != null &&
-              place['rating'] != null)
               .map((place) => {
             'name': place['name'],
-            'rating': place['rating'],
+            'rating': place['rating'] ?? 0.0,
             'lat': place['geometry']['location']['lat'],
             'lng': place['geometry']['location']['lng'],
+            'photo_reference': place['photos'] != null &&
+                place['photos'].isNotEmpty
+                ? place['photos'][0]['photo_reference']
+                : null,
+            'address': place['vicinity'],
           })
               .toList();
 
+          print('Filtered Results: $results');
           results.sort((a, b) => b['rating'].compareTo(a['rating']));
-          return results.take(5).toList();
+          return results;
         }
       } else {
         print('Failed to fetch places: ${response.statusCode}');
       }
-    } catch (e,stacktrace) {
+    } catch (e) {
       print('Error fetching places: $e');
-      print('Stacktrace: $stacktrace');
     }
 
     return [];
