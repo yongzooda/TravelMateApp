@@ -49,7 +49,12 @@ class _LandmarkMapScreenState extends State<LandmarkMapScreen> {
     }
   }
 
-  Future<void> addToFavorites(double latitude, double longitude) async {
+  Future<void> addToFavorites(
+      {
+        required String placeId,
+        required double latitude,
+        required double longitude,
+      }) async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -61,6 +66,9 @@ class _LandmarkMapScreenState extends State<LandmarkMapScreen> {
     }
 
     try {
+      // Place Details API를 호출하여 장소 세부 정보를 가져옵니다.
+      final placeDetails = await placeService.fetchPlaceDetails(placeId);
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -68,6 +76,7 @@ class _LandmarkMapScreenState extends State<LandmarkMapScreen> {
           .add({
         'latitude': latitude,
         'longitude': longitude,
+        'place_id': placeId, // place_id 추가
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -213,8 +222,9 @@ class _LandmarkMapScreenState extends State<LandmarkMapScreen> {
                             onPressed: () {
                               if (selectedPlace != null) {
                                 addToFavorites(
-                                  selectedPlace!['lat'],
-                                  selectedPlace!['lng'],
+                                  placeId: selectedPlace!['place_id'], // 명시적 인자 사용
+                                  latitude: selectedPlace!['lat'],
+                                  longitude: selectedPlace!['lng'],
                                 );
                               }
                             },
