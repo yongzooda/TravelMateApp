@@ -19,7 +19,7 @@ class _MapScreenState extends State<MapScreen> {
   late GoogleMapController mapController;
   Set<Marker> markers = {};
   Map<String, dynamic>? selectedPlace;
-
+  bool isFavorite = false; // 찜 여부 상태
   final String apiKey = 'AIzaSyCR_YT9dN3ei0ZBsiui-9UX8Vj6POVYEHQ';
 
   @override
@@ -46,6 +46,103 @@ class _MapScreenState extends State<MapScreen> {
     }
     return {};
   }
+
+  // Firestore에서 찜 여부 확인
+  Future<void> checkFavorite(String placeId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final categories = [
+      'favorite_restaurants',
+      'favorite_landmarks',
+      'favorite_accommodations'
+    ];
+
+    bool found = false;
+
+    for (String category in categories) {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection(category)
+          .where('place_id', isEqualTo: placeId)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        found = true;
+        break;
+      }
+    }
+
+    setState(() {
+      isFavorite = found;
+    });
+  }
+
+  // 찜하기 또는 취소하기
+  Future<void> toggleFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || selectedPlace == null) return;
+
+    final placeId = selectedPlace!['place_id'];
+    final category = determineCategory(selectedPlace!); // 장소 유형 결정
+
+    try {
+      if (isFavorite) {
+        // 찜 취소
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection(category) // 정확한 카테고리 사용
+            .where('place_id', isEqualTo: placeId)
+            .get();
+
+        for (var doc in snapshot.docs) {
+          await doc.reference.delete();
+        }
+
+        setState(() {
+          isFavorite = false;
+        });
+      } else {
+        // 찜하기
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection(category) // 정확한 카테고리 사용
+            .add({
+          'place_id': placeId,
+          'latitude': selectedPlace!['geometry']['location']['lat'],
+          'longitude': selectedPlace!['geometry']['location']['lng'],
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+        setState(() {
+          isFavorite = true;
+        });
+      }
+
+      // 찜 목록 새로고침
+      await fetchFavorites();
+    } catch (e) {
+      print('Error toggling favorite: $e');
+    }
+  }
+
+  String determineCategory(Map<String, dynamic> place) {
+    final types = place['types'] as List<dynamic>? ?? [];
+
+    if (types.contains('restaurant')) {
+      return 'favorite_restaurants';
+    } else if (types.contains('lodging')) {
+      return 'favorite_accommodations';
+    } else if (types.contains('tourist_attraction')) {
+      return 'favorite_landmarks';
+    } else {
+      return 'others'; // 기본값
+    }
+  }
+
 
   // 데이터베이스에서 찜한 장소 가져오기
   Future<void> fetchFavorites() async {
@@ -83,7 +180,8 @@ class _MapScreenState extends State<MapScreen> {
                 position: LatLng(place['latitude'], place['longitude']),
                 onTap: () {
                   setState(() {
-                    selectedPlace = details; // 선택된 장소 저장
+                    selectedPlace = details;
+                    isFavorite = true; // 찜 상태 설정
                   });
                 },
               ),
@@ -99,6 +197,8 @@ class _MapScreenState extends State<MapScreen> {
       print('Error fetching favorites: $e');
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -157,22 +257,6 @@ class _MapScreenState extends State<MapScreen> {
                                 '평점: ${selectedPlace!['rating']?.toString() ?? '평점 없음'}',
                                 style: TextStyle(fontSize: 14),
                               ),
-                              SizedBox(width: 8),
-                              Row(
-                                children: List.generate(
-                                  5,
-                                      (index) => Icon(
-                                    index <
-                                        (selectedPlace!['rating']
-                                            ?.round() ??
-                                            0)
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    color: Colors.amber,
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                           SizedBox(height: 8),
@@ -180,55 +264,48 @@ class _MapScreenState extends State<MapScreen> {
                             '주소: ${selectedPlace!['formatted_address'] ?? '주소 정보 없음'}',
                             style: TextStyle(fontSize: 14),
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            '리뷰:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: (selectedPlace!['reviews'] as List).length,
-                              itemBuilder: (context, index) {
-                                final review = (selectedPlace!['reviews'] as List)[index];
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                  child: Text(
-                                    '"${review['text']}" - ${review['author_name']}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
                         ],
                       ),
                     ),
                     SizedBox(width: 8),
-                    // 오른쪽 대표 사진
+                    // 오른쪽 대표 사진과 버튼
                     Expanded(
                       flex: 2,
-                      child: selectedPlace!['photos'] != null &&
-                          selectedPlace!['photos'].isNotEmpty
-                          ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8.0),
-                        child: Image.network(
-                          'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace!['photos'][0]['photo_reference']}&key=$apiKey',
-                          width: double.infinity,
-                          height: 250,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                          : Container(
-                        height: 250,
-                        color: Colors.grey[300],
-                        child: Icon(Icons.image_not_supported),
+                      child: Column(
+                        children: [
+                          selectedPlace!['photos'] != null &&
+                              selectedPlace!['photos'].isNotEmpty
+                              ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8.0),
+                            child: Image.network(
+                              'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace!['photos'][0]['photo_reference']}&key=$apiKey',
+                              width: double.infinity,
+                              height: 200,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                              : Container(
+                            height: 200,
+                            color: Colors.grey[300],
+                            child: Icon(Icons.image_not_supported),
+                          ),
+                          SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            onPressed: toggleFavorite,
+                            icon: Icon(
+                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                            ),
+                            label: Text(isFavorite ? '찜하기 취소' : '찜하기'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                selectedPlace = null;
+                              });
+                            },
+                            child: Text('닫기'),
+                          ),
+                        ],
                       ),
                     ),
                   ],
