@@ -49,10 +49,13 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
     }
   }
 
-  Future<void> addToFavorites(double latitude, double longitude) async {
+  Future<void> addToFavorites({
+    required String placeId,
+    required double latitude,
+    required double longitude,
+  }) async {
     final user = FirebaseAuth.instance.currentUser;
 
-    // null 체크 추가
     if (user == null) {
       print("사용자가 인증되지 않았습니다.");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -62,6 +65,9 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
     }
 
     try {
+      // Place Details API를 호출하여 장소 세부 정보를 가져옵니다.
+      final placeDetails = await placeService.fetchPlaceDetails(placeId);
+
       // user.uid 접근 시 null 안전 연산자를 사용하지 않아도 됨 (이미 null 체크 완료)
       await FirebaseFirestore.instance
           .collection('users')
@@ -70,6 +76,7 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
           .add({
         'latitude': latitude,
         'longitude': longitude,
+        'place_id': placeId, // place_id 추가
         'timestamp': FieldValue.serverTimestamp(), // 추가 데이터
       });
 
@@ -219,8 +226,9 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
                             onPressed: () {
                               if (selectedPlace != null) {
                                 addToFavorites(
-                                  selectedPlace!['lat'],
-                                  selectedPlace!['lng'],
+                                  placeId: selectedPlace!['place_id'], // 명시적 인자 사용
+                                  latitude: selectedPlace!['lat'],
+                                  longitude: selectedPlace!['lng'],
                                 );
                               }
                             },
@@ -230,6 +238,7 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
                               backgroundColor: Colors.red,
                             ),
                           ),
+
                         ],
                       ),
                     ),

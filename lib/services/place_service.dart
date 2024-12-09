@@ -46,6 +46,7 @@ class PlaceService {
             final details = await fetchPlaceDetails(place['place_id']);
             return {
               'name': place['name'],
+              'place_id': place['place_id'], // place_id 추가
               'rating': place['rating'] ?? 0.0,
               'lat': place['geometry']['location']['lat'],
               'lng': place['geometry']['location']['lng'],
