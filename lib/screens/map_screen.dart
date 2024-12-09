@@ -279,6 +279,11 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                           SizedBox(height: 8),
                           Text(
+                            '전화번호: ${selectedPlace!['formatted_phone_number'] ?? '전화번호 없음'}', // 전화번호 추가
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
                             '리뷰:',
                             style: TextStyle(
                               fontSize: 14,
