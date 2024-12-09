@@ -197,6 +197,11 @@ class _LandmarkMapScreenState extends State<LandmarkMapScreen> {
                             style: TextStyle(fontSize: 14),
                           ),
                           SizedBox(height: 8),
+                          Text(
+                            '전화번호: ${selectedPlace!['formatted_phone_number'] ?? '전화번호 없음'}',
+                            style: TextStyle(fontSize: 14, color: Colors.blue),
+                          ),
+                          SizedBox(height: 8),
                           Expanded(
                             child: (selectedPlace!['reviews'] as List?)
                                 ?.isNotEmpty ??

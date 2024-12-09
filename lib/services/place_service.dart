@@ -13,7 +13,10 @@ class PlaceService {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['result']; // Place Details API의 'result' 반환
+        return {
+          ...data['result'], // 'result' Map 전체를 펼쳐서 포함
+          'formatted_phone_number': data['result']['formatted_phone_number'] ?? '전화번호 없음', // 전화번호 추가
+        };
       } else {
         print('Failed to fetch place details: ${response.statusCode}');
       }
@@ -21,7 +24,7 @@ class PlaceService {
       print('Error fetching place details: $e');
     }
 
-    return {};
+    return {}; // 기본 빈 Map 반환
   }
 
   // Nearby Search API 호출 + Place Details 데이터 병합
@@ -55,6 +58,7 @@ class PlaceService {
                   ? place['photos'][0]['photo_reference']
                   : null,
               'address': place['vicinity'],
+              'formatted_phone_number': details['formatted_phone_number'], // 전화번호 추가
               'reviews': details['reviews'] ?? [],
             };
           }));
