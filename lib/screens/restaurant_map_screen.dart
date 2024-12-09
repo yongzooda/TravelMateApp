@@ -18,6 +18,7 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
   final PlaceService placeService = PlaceService();
   Set<Marker> markers = {};
   Map<String, dynamic>? selectedPlace;
+  bool isFavorite = false; // 찜 여부 상태
 
   @override
   void initState() {
@@ -25,6 +26,7 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
     fetchPlaces();
   }
 
+  // 장소 가져오기
   void fetchPlaces() async {
     final places = await placeService.fetchPlaces(
       latitude: widget.latitude,
@@ -38,10 +40,12 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
           return Marker(
             markerId: MarkerId(place['name']),
             position: LatLng(place['lat'], place['lng']),
-            onTap: () {
+            onTap: () async {
               setState(() {
                 selectedPlace = place;
               });
+              // 선택된 장소가 찜 목록에 있는지 확인
+              await checkFavorite(place['place_id']);
             },
           );
         }).toSet();
@@ -49,49 +53,70 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
     }
   }
 
-  Future<void> addToFavorites({
-    required String placeId,
-    required double latitude,
-    required double longitude,
-  }) async {
+  // 찜 여부 확인
+  Future<void> checkFavorite(String placeId) async {
     final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    if (user == null) {
-      print("사용자가 인증되지 않았습니다.");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('로그인이 필요합니다.')),
-      );
-      return;
-    }
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('favorite_restaurants')
+        .where('place_id', isEqualTo: placeId)
+        .get();
+
+    setState(() {
+      isFavorite = snapshot.docs.isNotEmpty;
+    });
+  }
+
+  // 찜하기 또는 찜하기 취소
+  Future<void> toggleFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || selectedPlace == null) return;
+
+    final placeId = selectedPlace!['place_id'];
 
     try {
-      // Place Details API를 호출하여 장소 세부 정보를 가져옵니다.
-      final placeDetails = await placeService.fetchPlaceDetails(placeId);
+      if (isFavorite) {
+        // 찜하기 취소
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('favorite_restaurants')
+            .where('place_id', isEqualTo: placeId)
+            .get();
 
-      // user.uid 접근 시 null 안전 연산자를 사용하지 않아도 됨 (이미 null 체크 완료)
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('favorite_restaurants')
-          .add({
-        'latitude': latitude,
-        'longitude': longitude,
-        'place_id': placeId, // place_id 추가
-        'timestamp': FieldValue.serverTimestamp(), // 추가 데이터
-      });
+        for (var doc in snapshot.docs) {
+          await doc.reference.delete();
+        }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('찜한 장소가 저장되었습니다.')),
-      );
+        setState(() {
+          isFavorite = false;
+        });
+      } else {
+        // 찜하기 추가
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('favorite_restaurants')
+            .add({
+          'place_id': placeId,
+          'latitude': selectedPlace!['lat'],
+          'longitude': selectedPlace!['lng'],
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+        setState(() {
+          isFavorite = true;
+        });
+      }
     } catch (e) {
-      print('찜하기 실패: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('찜 목록 추가 중 문제가 발생했습니다.')),
-      );
+      print('찜하기 동작 실패: $e');
     }
   }
 
-
+  // 평점 UI 빌드
   Widget buildStarRating(double rating) {
     return Row(
       children: List.generate(5, (index) {
@@ -120,7 +145,6 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
             ),
             markers: markers,
           ),
-
           if (selectedPlace != null)
             Positioned(
               bottom: 0,
@@ -128,8 +152,18 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
               right: 0,
               child: Container(
                 height: 350,
-                color: Colors.white,
                 padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8.0,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Row(
                   children: [
                     // 왼쪽 텍스트 정보
@@ -139,7 +173,7 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            selectedPlace!['name'],
+                            selectedPlace!['name'] ?? '알 수 없는 장소',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -149,25 +183,24 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
                           Row(
                             children: [
                               Text(
-                                '평점: ${selectedPlace!['rating']}',
+                                '평점: ${selectedPlace!['rating'] ?? 'N/A'}',
                                 style: TextStyle(fontSize: 14),
                               ),
                               SizedBox(width: 8),
-                              buildStarRating(selectedPlace!['rating']),
+                              buildStarRating(
+                                  selectedPlace!['rating'] ?? 0.0),
                             ],
                           ),
                           SizedBox(height: 8),
-                          Text('주소: ${selectedPlace!['address']}'),
-                          SizedBox(height: 8),
                           Text(
-                            '리뷰:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            '주소: ${selectedPlace!['address'] ?? 'N/A'}',
+                            style: TextStyle(fontSize: 14),
                           ),
+                          SizedBox(height: 8),
                           Expanded(
-                            child: (selectedPlace!['reviews'] as List).isNotEmpty
+                            child: (selectedPlace!['reviews'] as List?)
+                                ?.isNotEmpty ??
+                                false
                                 ? ListView.builder(
                               itemCount:
                               (selectedPlace!['reviews'] as List)
@@ -196,7 +229,7 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
                       ),
                     ),
                     SizedBox(width: 8),
-                    // 오른쪽 대표 사진과 찜하기 버튼
+                    // 오른쪽 대표 사진과 버튼
                     Expanded(
                       flex: 2,
                       child: Column(
@@ -207,38 +240,48 @@ class _RestaurantMapScreenState extends State<RestaurantMapScreen> {
                             child: Image.network(
                               'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace!['photo_reference']}&key=${placeService.apiKey}',
                               width: double.infinity,
-                              height: 250, // 사진 크기를 크게 설정
+                              height: 260,
                               fit: BoxFit.cover,
                             ),
                           )
                               : Container(
-                            height: 150,
-                            width: double.infinity,
+                            height: 200,
                             color: Colors.grey[300],
-                            child: Icon(
-                              Icons.image_not_supported,
-                              size: 50,
-                              color: Colors.grey[700],
-                            ),
+                            child: Icon(Icons.image_not_supported),
                           ),
                           SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              if (selectedPlace != null) {
-                                addToFavorites(
-                                  placeId: selectedPlace!['place_id'], // 명시적 인자 사용
-                                  latitude: selectedPlace!['lat'],
-                                  longitude: selectedPlace!['lng'],
-                                );
-                              }
-                            },
-                            icon: Icon(Icons.favorite, color: Colors.white),
-                            label: Text('찜하기'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                            ),
+                          // 찜하기 및 닫기 버튼
+                          Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: toggleFavorite,
+                                icon: Icon(
+                                  isFavorite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                ),
+                                label: Text(
+                                    isFavorite ? '찜하기 취소' : '찜하기'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isFavorite
+                                      ? Colors.redAccent
+                                      : Colors.blueAccent,
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    selectedPlace = null;
+                                  });
+                                },
+                                child: Text('닫기'),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey),
+                              ),
+                            ],
                           ),
-
                         ],
                       ),
                     ),
