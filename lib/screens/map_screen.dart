@@ -143,7 +143,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-
   // 데이터베이스에서 찜한 장소 가져오기
   Future<void> fetchFavorites() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -197,8 +196,6 @@ class _MapScreenState extends State<MapScreen> {
       print('Error fetching favorites: $e');
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -257,12 +254,59 @@ class _MapScreenState extends State<MapScreen> {
                                 '평점: ${selectedPlace!['rating']?.toString() ?? '평점 없음'}',
                                 style: TextStyle(fontSize: 14),
                               ),
+                              SizedBox(width: 8),
+                              Row(
+                                children: List.generate(
+                                  5,
+                                      (index) => Icon(
+                                    index <
+                                        (selectedPlace!['rating']
+                                            ?.round() ??
+                                            0)
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    color: Colors.amber,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           SizedBox(height: 8),
                           Text(
                             '주소: ${selectedPlace!['formatted_address'] ?? '주소 정보 없음'}',
                             style: TextStyle(fontSize: 14),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '리뷰:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: (selectedPlace!['reviews']
+                              as List)
+                                  .length,
+                              itemBuilder: (context, index) {
+                                final review = (selectedPlace!['reviews']
+                                as List)[index];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0),
+                                  child: Text(
+                                    '"${review['text']}" - ${review['author_name']}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -280,7 +324,7 @@ class _MapScreenState extends State<MapScreen> {
                             child: Image.network(
                               'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace!['photos'][0]['photo_reference']}&key=$apiKey',
                               width: double.infinity,
-                              height: 200,
+                              height: 260,
                               fit: BoxFit.cover,
                             ),
                           )
@@ -290,20 +334,50 @@ class _MapScreenState extends State<MapScreen> {
                             child: Icon(Icons.image_not_supported),
                           ),
                           SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: toggleFavorite,
-                            icon: Icon(
-                              isFavorite ? Icons.favorite : Icons.favorite_border,
-                            ),
-                            label: Text(isFavorite ? '찜하기 취소' : '찜하기'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                selectedPlace = null;
-                              });
-                            },
-                            child: Text('닫기'),
+                          // 찜하기 및 닫기 버튼 (가로 배치)
+                          Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: toggleFavorite,
+                                icon: Icon(
+                                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                                  color: Colors.white, // 아이콘 색상 흰색
+                                ),
+                                label: Text(isFavorite
+                                    ? '찜하기 취소'
+                                    : '찜하기'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isFavorite ? Colors.redAccent : Colors.blueAccent, // 강조 색상으로 변경
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10), // 버튼 모서리 둥글게
+                                  ),
+                                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16), // 버튼 내부 여백
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    selectedPlace = null;
+                                  });
+                                },
+                                child: Text(
+                                  '닫기',
+                                  style: TextStyle(
+                                    color: Colors.white, // 텍스트 색상 흰색
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey[700], // 더 어두운 회색으로 변경
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10), // 버튼 모서리 둥글게
+                                  ),
+                                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16), // 버튼 내부 여백
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
