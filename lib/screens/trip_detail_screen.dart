@@ -5,6 +5,8 @@ import 'map_screen.dart';
 import 'restaurant_map_screen.dart';
 import 'landmark_map_screen.dart';
 import 'accommodation_map_screen.dart';
+import 'package:finalproject/screens/schedule_screen.dart';
+
 import '../widgets/app_drawer.dart';
 
 class TripDetailScreen extends StatefulWidget {
@@ -199,6 +201,23 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     icon: Icon(Icons.hotel),
                     label: Text('숙소 지도 보기'),
                   ),
+                  SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ScheduleScreen(
+                            latitude: latitude,
+                            longitude: longitude,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.schedule),
+                    label: Text('스케쥴 짜기'),
+                  ),
+
                 ],
               ),
             ),
