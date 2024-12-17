@@ -7,77 +7,110 @@ class MyTripsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('My Trips')),
-      drawer: AppDrawer(), // 공통 Drawer 추가
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _getTripsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator()); // 데이터 로딩 중
-          }
+      appBar: AppBar(
+        title: Text('My Trips'),
+        backgroundColor: Colors.blueAccent,
+      ),
+      drawer: AppDrawer(),
+      body: Container(
+        color: Colors.grey[100], // 배경색 추가
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _getTripsStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('데이터를 불러오는 중 오류가 발생했습니다.'),
-            );
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Text(
-                '저장된 여행지가 없습니다.',
-                style: TextStyle(fontSize: 16),
-              ),
-            );
-          }
-
-          final trips = snapshot.data!.docs;
-
-          return ListView.builder(
-            itemCount: trips.length,
-            itemBuilder: (context, index) {
-              final tripDoc = trips[index]; // 문서 참조
-              final tripData = tripDoc.data() as Map<String, dynamic>;
-
-              return Card(
-                child: ListTile(
-                  leading: tripData['photo'] != null
-                      ? Image.network(
-                    tripData['photo'],
-                    width: 50,
-                    height: 50,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.image_not_supported);
-                    },
-                  )
-                      : Icon(Icons.image),
-                  title: Text(tripData['name'] ?? '이름 없음'),
-                  subtitle: Text(tripData['dates'] ?? '날짜 없음'),
-                  trailing: IconButton(
-                    icon: Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      _confirmDelete(context, tripDoc.id); // 삭제 확인 다이얼로그 호출
-                    },
-                  ),
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/tripDetail',
-                      arguments: {
-                        'name': tripData['name'],
-                        'dates': tripData['dates'],
-                        'photo': tripData['photo'],
-                        'latitude': tripData['latitude'], // 위도 추가
-                        'longitude': tripData['longitude'], // 경도 추가
-                      },
-                    );
-                  },
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  '데이터를 불러오는 중 오류가 발생했습니다.',
+                  style: TextStyle(fontSize: 16, color: Colors.red),
                 ),
               );
-            },
-          );
-        },
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Center(
+                child: Text(
+                  '저장된 여행지가 없습니다.',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              );
+            }
+
+            final trips = snapshot.data!.docs;
+
+            return ListView.builder(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              itemCount: trips.length,
+              itemBuilder: (context, index) {
+                final tripDoc = trips[index];
+                final tripData = tripDoc.data() as Map<String, dynamic>;
+
+                return Card(
+                  margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: tripData['photo'] != null
+                          ? Image.network(
+                        tripData['photo'],
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      )
+                          : Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image, size: 40),
+                      ),
+                    ),
+                    title: Text(
+                      tripData['name'] ?? '이름 없음',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      tripData['dates'] ?? '날짜 없음',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete, color: Colors.redAccent),
+                      onPressed: () {
+                        _confirmDelete(context, tripDoc.id);
+                      },
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/tripDetail',
+                        arguments: {
+                          'name': tripData['name'],
+                          'dates': tripData['dates'],
+                          'photo': tripData['photo'],
+                          'latitude': tripData['latitude'],
+                          'longitude': tripData['longitude'],
+                        },
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -108,16 +141,16 @@ class MyTripsScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // 다이얼로그 닫기
+                Navigator.of(context).pop();
               },
               child: Text('취소'),
             ),
             TextButton(
               onPressed: () async {
                 await _deleteTrip(tripId);
-                Navigator.of(context).pop(); // 다이얼로그 닫기
+                Navigator.of(context).pop();
               },
-              child: Text('삭제'),
+              child: Text('삭제', style: TextStyle(color: Colors.red)),
             ),
           ],
         );

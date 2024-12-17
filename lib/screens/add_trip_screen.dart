@@ -6,7 +6,12 @@ import '../services/geo_service.dart';
 import 'package:intl/intl.dart';
 import '../widgets/app_drawer.dart';
 
-class AddTripScreen extends StatelessWidget {
+class AddTripScreen extends StatefulWidget {
+  @override
+  _AddTripScreenState createState() => _AddTripScreenState();
+}
+
+class _AddTripScreenState extends State<AddTripScreen> {
   final TextEditingController _nameController = TextEditingController();
   final PhotoService _photoService = PhotoService();
   final GeoService _geoService = GeoService();
@@ -16,61 +21,155 @@ class AddTripScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Add New Trip')),
+      appBar: AppBar(
+        title: Text('Add New Trip'),
+        backgroundColor: Colors.blueAccent,
+      ),
       drawer: AppDrawer(),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(labelText: '여행지 이름'),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 여행지 입력 카드
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "여행지 이름",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          hintText: "예: 서울, 파리, 부산 등",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      // 날짜 선택 버튼
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildDateSelector(
+                              "여행 시작일", _startDate, () => _pickDate(true)),
+                          _buildDateSelector(
+                              "여행 종료일", _endDate, () => _pickDate(false)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: _buildAddButton(context),
+    );
+  }
+
+  // 날짜 선택 버튼
+  Widget _buildDateSelector(
+      String title, DateTime? date, VoidCallback onPressed) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+          SizedBox(height: 6),
+          OutlinedButton(
+            onPressed: onPressed,
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            TextButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2101),
-                );
-                if (picked != null) {
-                  _startDate = picked;
-                }
-              },
-              child: Text('여행 시작 날짜 선택'),
+            child: Text(
+              date != null ? DateFormat('yyyy-MM-dd').format(date) : '날짜 선택',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
             ),
-            TextButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _startDate ?? DateTime.now(),
-                  firstDate: _startDate ?? DateTime.now(),
-                  lastDate: DateTime(2101),
-                );
-                if (picked != null) {
-                  _endDate = picked;
-                }
-              },
-              child: Text('여행 종료 날짜 선택'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // "추가" 버튼 하단 고정
+  Widget _buildAddButton(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      color: Colors.white,
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _submitTrip,
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final tripName = _nameController.text.trim();
-                if (tripName.isNotEmpty) {
-                  await _addTripToFirestore(context, tripName);
-                  Navigator.pop(context, true); // 성공 신호 반환
-                }
-              },
-              child: Text('추가'),
-            ),
-          ],
+            backgroundColor: Colors.blueAccent,
+          ),
+          child: Text(
+            "여행 추가하기",
+            style: TextStyle(fontSize: 18, color: Colors.white),
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _addTripToFirestore(BuildContext context, String tripName) async {
+  Future<void> _pickDate(bool isStartDate) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: isStartDate ? DateTime.now() : _startDate ?? DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isStartDate) {
+          _startDate = picked;
+          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+            _endDate = null; // 종료일 리셋
+          }
+        } else {
+          _endDate = picked;
+        }
+      });
+    }
+  }
+
+  void _submitTrip() async {
+    final tripName = _nameController.text.trim();
+    if (tripName.isEmpty || _startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("모든 정보를 입력해주세요.")),
+      );
+      return;
+    }
+
+    await _addTripToFirestore(tripName);
+    Navigator.pop(context, true);
+  }
+
+  Future<void> _addTripToFirestore(String tripName) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
@@ -80,25 +179,22 @@ class AddTripScreen extends StatelessWidget {
           .doc(user.uid)
           .collection('MyTrips');
 
-      final now = DateTime.now();
       final photoUrl = await _photoService.fetchPhoto(tripName);
-      final coordinates = await _geoService.getCoordinates(tripName); // Geocoding API 호출
-
-      final formatter = DateFormat('M월 d일');
-      final startDateStr = _startDate != null ? formatter.format(_startDate!) : "미정";
-      final endDateStr = _endDate != null ? formatter.format(_endDate!) : "미정";
+      final coordinates = await _geoService.getCoordinates(tripName);
 
       await tripsRef.add({
         "name": tripName,
-        "dates": "$startDateStr ~ $endDateStr",
+        "dates":
+        "${DateFormat('yyyy-MM-dd').format(_startDate!)} ~ ${DateFormat('yyyy-MM-dd').format(_endDate!)}",
         "photo": photoUrl,
-        "latitude": coordinates['latitude'], // 좌표 저장
-        "longitude": coordinates['longitude'], // 좌표 저장
+        "latitude": coordinates['latitude'],
+        "longitude": coordinates['longitude'],
         "lastVisited": Timestamp.now(),
       });
-      print('Trip added successfully');
+
+      print("여행지가 추가되었습니다.");
     } catch (e) {
-      print('여행지 추가 실패: $e');
+      print("여행지 추가 실패: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('여행지 추가 실패: $e')),
       );

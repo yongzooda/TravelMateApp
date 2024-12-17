@@ -70,8 +70,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       drawer: AppDrawer(),
       body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 상단 이미지 섹션
             Stack(
               children: [
                 photoUrl != null
@@ -108,118 +108,114 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 ),
               ],
             ),
+
+            // 여행 일정 및 날씨 섹션
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '여행 일정: ${widget.trip['dates']}',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  SizedBox(height: 16),
-                  weatherData == null
-                      ? Center(child: CircularProgressIndicator())
-                      : Column(
+              child: Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '현재 날씨: ${weatherData!['weather'][0]['description']}',
-                        style: TextStyle(fontSize: 16),
+                        '여행 일정: ${widget.trip['dates']}',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      Text(
-                        '온도: ${weatherData!['main']['temp']}°C',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      Text(
-                        '습도: ${weatherData!['main']['humidity']}%',
-                        style: TextStyle(fontSize: 16),
+                      Divider(),
+                      weatherData == null
+                          ? Center(child: CircularProgressIndicator())
+                          : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Column(
+                            children: [
+                              Icon(Icons.wb_sunny, color: Colors.orange),
+                              SizedBox(height: 4),
+                              Text(
+                                  '날씨: ${weatherData!['weather'][0]['description']}'),
+                            ],
+                          ),
+                          Column(
+                            children: [
+                              Icon(Icons.thermostat,
+                                  color: Colors.redAccent),
+                              SizedBox(height: 4),
+                              Text('온도: ${weatherData!['main']['temp']}°C'),
+                            ],
+                          ),
+                          Column(
+                            children: [
+                              Icon(Icons.water_drop,
+                                  color: Colors.blueAccent),
+                              SizedBox(height: 4),
+                              Text('습도: ${weatherData!['main']['humidity']}%'),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MapScreen(
-                            latitude: latitude,
-                            longitude: longitude,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.map),
-                    label: Text('여행지 지도 보기'),
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RestaurantMapScreen(
-                            latitude: latitude,
-                            longitude: longitude,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.restaurant),
-                    label: Text('맛집 지도 보기'),
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => LandmarkMapScreen(
-                            latitude: latitude,
-                            longitude: longitude,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.location_city),
-                    label: Text('명소 지도 보기'),
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AccommodationMapScreen(
-                            latitude: latitude,
-                            longitude: longitude,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.hotel),
-                    label: Text('숙소 지도 보기'),
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ScheduleScreen(
-                            latitude: latitude,
-                            longitude: longitude,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.schedule),
-                    label: Text('스케쥴 짜기'),
-                  ),
+                ),
+              ),
+            ),
 
+            // 버튼 섹션 - Grid로 배치
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 3 / 1.1,
+                children: [
+                  _buildCustomButton(
+                      context, '여행지 지도 보기', Icons.map, MapScreen(latitude: latitude, longitude: longitude)),
+                  _buildCustomButton(
+                      context, '맛집 지도 보기', Icons.restaurant, RestaurantMapScreen(latitude: latitude, longitude: longitude)),
+                  _buildCustomButton(
+                      context, '명소 지도 보기', Icons.location_city, LandmarkMapScreen(latitude: latitude, longitude: longitude)),
+                  _buildCustomButton(
+                      context, '숙소 지도 보기', Icons.hotel, AccommodationMapScreen(latitude: latitude, longitude: longitude)),
+                  _buildCustomButton(
+                      context, '스케쥴 짜기', Icons.schedule, ScheduleScreen(latitude: latitude, longitude: longitude)),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 버튼 커스텀 위젯
+  Widget _buildCustomButton(BuildContext context, String title, IconData icon, Widget screen) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => screen),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.blueAccent, size: 28),
+            SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
