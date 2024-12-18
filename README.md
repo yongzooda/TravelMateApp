@@ -1,5 +1,7 @@
 모바일 프로그래밍 기말 프로젝트 - TravelMate: 여행 가이드 앱
 
+안드로이드 스듀디오로 앱 구동시 main.dart로 진입해 시작해 주세요
+
 ![image](https://github.com/user-attachments/assets/8722cc9b-2d5f-47fc-9d37-8a674ca0ee23)
 
 ![image](https://github.com/user-attachments/assets/c83cdb0e-4619-48ff-b14e-db5f16a93303)
