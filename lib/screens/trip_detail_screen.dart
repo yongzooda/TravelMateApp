@@ -34,7 +34,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   void fetchWeather() async {
     try {
-      final data = await weatherService.fetchWeather(widget.trip['name']);
+      final latitude = widget.trip['latitude'] ?? 0.0;
+      final longitude = widget.trip['longitude'] ?? 0.0;
+      final data = await weatherService.fetchWeatherByCoordinates(latitude, longitude);
       setState(() {
         weatherData = data;
       });
@@ -42,6 +44,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       print('Failed to fetch weather data: $e');
     }
   }
+
 
   void fetchPhoto() async {
     try {

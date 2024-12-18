@@ -27,6 +27,36 @@ class PlaceService {
     return {}; // 기본 빈 Map 반환
   }
 
+  // Place Suggestions API (Autocomplete) 호출
+  Future<List<Map<String, dynamic>>> fetchPlaceSuggestions(String input) async {
+    final url =
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$apiKey&types=geocode';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['predictions'] != null) {
+          final predictions = (data['predictions'] as List);
+          return predictions.map((suggestion) {
+            return {
+              'description': suggestion['description'],
+              'place_id': suggestion['place_id'],
+            };
+          }).toList();
+        }
+      } else {
+        print('Failed to fetch place suggestions: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching place suggestions: $e');
+    }
+
+    return [];
+  }
+
+
   // Nearby Search API 호출 + Place Details 데이터 병합
   Future<List<Map<String, dynamic>>> fetchPlaces({
     required double latitude,
