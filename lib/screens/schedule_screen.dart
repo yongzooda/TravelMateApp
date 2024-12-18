@@ -254,6 +254,24 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return SizedBox.shrink(); // 빈 위젯으로 교체
   }
 
+  Widget _buildStatusIndicator() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_startPoint != null)
+            Text('출발지: ${_startPoint!.latitude}, ${_startPoint!.longitude}',
+                style: TextStyle(fontSize: 14, color: Colors.green)),
+          if (_endPoint != null)
+            Text('목적지: ${_endPoint!.latitude}, ${_endPoint!.longitude}',
+                style: TextStyle(fontSize: 14, color: Colors.red)),
+        ],
+      ),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -282,6 +300,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ),
               Divider(height: 1, color: Colors.grey), // 상단과 하단 분리
+              // 출발지 및 목적지 상태 표시
+              _buildStatusIndicator(),
 
               // 하단 영역
               Expanded(
@@ -325,23 +345,36 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                         trailing: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            IconButton(
-                                              icon: Icon(Icons.play_arrow),
+                                            // 출발지 설정 버튼 (녹색)
+                                            ElevatedButton.icon(
                                               onPressed: () {
                                                 setState(() {
                                                   _startPoint = LatLng(place['lat'], place['lng']);
                                                 });
                                                 _showSnackBar('출발지가 설정되었습니다.');
                                               },
+                                              icon: Icon(Icons.directions_run, size: 18, color: Colors.white),
+                                              label: Text('출발지'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green,
+                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              ),
                                             ),
-                                            IconButton(
-                                              icon: Icon(Icons.flag),
+                                            SizedBox(width: 8),
+                                            // 목적지 설정 버튼 (빨간색)
+                                            ElevatedButton.icon(
                                               onPressed: () {
                                                 setState(() {
                                                   _endPoint = LatLng(place['lat'], place['lng']);
                                                 });
                                                 _showSnackBar('목적지가 설정되었습니다.');
                                               },
+                                              icon: Icon(Icons.flag, size: 18, color: Colors.white),
+                                              label: Text('목적지'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -388,6 +421,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
     );
   }
+
 
 // 스낵바를 표시하는 함수
   void _showSnackBar(String message) {
