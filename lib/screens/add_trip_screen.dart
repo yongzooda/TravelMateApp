@@ -135,10 +135,22 @@ class _AddTripScreenState extends State<AddTripScreen> {
   }
 
   Future<void> _pickDate(bool isStartDate) async {
+    if (!isStartDate && _startDate == null) {
+      // 시작 날짜가 선택되지 않은 경우 경고 메시지 표시
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("먼저 여행 시작일을 선택해주세요.")),
+      );
+      return;
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: isStartDate ? DateTime.now() : _startDate ?? DateTime.now(),
+      initialDate: isStartDate
+          ? DateTime.now()
+          : _startDate!.add(Duration(days: 1)), // 종료일의 초기값은 시작일 다음날
+      firstDate: isStartDate
+          ? DateTime.now()
+          : _startDate!, // 종료일의 최소값은 시작일과 동일
       lastDate: DateTime(2101),
     );
 
@@ -155,6 +167,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
       });
     }
   }
+
 
   void _submitTrip() async {
     final tripName = _nameController.text.trim();
